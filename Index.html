@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tưới cây thông minh</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e88e5">
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+body{font-family:Arial;background:#f2f2f2}
+.box{max-width:420px;margin:auto;background:#fff;padding:15px;border-radius:10px}
+h2{text-align:center}
+.row{margin:6px 0}
+button{width:100%;padding:12px;font-size:16px;margin-top:8px;border-radius:8px;border:none}
+.manual{background:#e53935;color:#fff}
+.save{background:#1e88e5;color:#fff}
+input{width:100%;padding:8px;font-size:16px}
+</style>
+</head>
+
+<body>
+<div class="box">
+<h2>🌱 TƯỚI CÂY MQTT</h2>
+
+<div class="row">📶 WiFi: <b id="wifi">--</b></div>
+<div class="row">⚙️ Chế độ: <b id="mode">--</b></div>
+<div class="row">🌱 Độ ẩm: <span id="soil">--</span>%</div>
+<div class="row">🌧 Mưa: <span id="rain">--</span></div>
+<div class="row">🔋 Pin: <span id="bat">--</span> V</div>
+<div class="row">🚿 Bơm: <span id="pump">--</span></div>
+
+<hr>
+
+<label>Ngưỡng độ ẩm (%)</label>
+<input type="number" id="soilSet">
+
+<label>Thời gian tưới (phút)</label>
+<input type="number" id="minSet">
+
+<label>Thời gian tưới (giây)</label>
+<input type="number" id="secSet">
+
+<button class="save" onclick="save()">LƯU CÀI ĐẶT</button>
+<button class="manual" onclick="manual()">🚿 TƯỚI THỦ CÔNG</button>
+</div>
+
+<script>
+const client = mqtt.connect("wss://broker.hivemq.com:8000/mqtt");
+
+client.on("connect",()=>{
+  client.subscribe("tuoi/status");
+});
+
+client.on("message",(t,m)=>{
+  const d = JSON.parse(m.toString());
+  wifi.textContent = d.wifi ? "OK" : "MẤT";
+  mode.textContent = d.mode;
+  soil.textContent = d.soil;
+  rain.textContent = d.rain ? "CÓ" : "KHÔNG";
+  bat.textContent = d.bat.toFixed(2);
+  pump.textContent = d.pump ? "ĐANG CHẠY" : "TẮT";
+});
+
+function manual(){
+  client.publish("tuoi/cmd","MANUAL_ON");
+}
+
+function save(){
+  client.publish("tuoi/cmd","SET_SOIL:"+soilSet.value);
+  client.publish("tuoi/cmd","SET_TIME:"+minSet.value+":"+secSet.value);
+}
+
+// PWA
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</body>
+</html>
